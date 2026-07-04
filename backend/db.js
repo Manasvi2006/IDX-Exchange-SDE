@@ -1,10 +1,5 @@
 require('dotenv').config();
 
-require('dotenv').config();
-console.log('DB_USER is:', process.env.DB_USER);
-console.log('DB_HOST is:', process.env.DB_HOST);
-
-
 const mysql = require('mysql2/promise'); //gets the mysql2 from the folder that was downlaoded and looks for the promise entry point
 
 const pool = mysql.createPool({

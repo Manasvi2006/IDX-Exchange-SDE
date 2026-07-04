@@ -1,4 +1,8 @@
 {
+  "scripts": {
+  "dev": "nodemon index.js",
+  "start": "node index.js"
+  },
   "dependencies": {
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
