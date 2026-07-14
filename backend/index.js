@@ -10,6 +10,17 @@ const propertiesRoute = require('./routes/properties'); //for route connections
 const app = express();
 app.use(cors()); //allows requests to come in from different points of origin
 app.use(express.json()); //converts raw data into javascript
+
+
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - ${res.statusCode} (${duration}ms)`);
+  });
+  next();
+});
+
 app.use('/api/properties', propertiesRoute); //mounting from route
 
 app.get('/api/health', async (req, res) => {

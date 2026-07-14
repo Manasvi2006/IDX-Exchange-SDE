@@ -51,6 +51,7 @@ function validateQueryParams({ offset, limit, minPrice, maxPrice, beds, baths })
 // this handles GET requests to /api/properties
 // async means it can wait for database responses without freezing the server
 router.get('/', async (req, res) => {
+    console.log('HIT the / route, query:', req.query);
     try {
     // pull the query params out of the URL
     // page and limit have defaults in case the user doesn't send them
@@ -118,6 +119,92 @@ router.get('/', async (req, res) => {
     res.status(500).json({ error: 'Database error', message: error.message });
     }
 });
+
+
+
+// returns all open house events tied to a specific property
+// we check the property exists first so we can give a better error if it doesn't
+router.get('/:id/openhouses', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // same id check as above — no point querying if the id is blank
+    const idError = validateListingId(id);
+    if (idError) {
+      return res.status(400).json({ error: idError });
+    }
+
+    // verify the property actually exists before looking for its open houses
+    // this way we return a proper 404 instead of just an empty results array
+    const [propertyRows] = await db.query(
+      'SELECT id FROM rets_property WHERE L_ListingID = ?',
+      [id]
+    );
+
+    if (propertyRows.length === 0) {
+      return res.status(404).json({ error: 'Property not found' });
+    }
+
+    // grab all open houses that match this listing ID
+    const [openhouses] = await db.query(
+      'SELECT * FROM rets_openhouse WHERE L_ListingID = ?',
+      [id]
+    );
+
+    // include the total count so the client knows how many events there are
+    // without having to count the array themselves
+    res.json({
+      total: openhouses.length,
+      results: openhouses
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Database error', message: error.message });
+  }
+});
+
+
+// quick helper to catch missing or blank listing IDs before hitting the database
+function validateListingId(id) {
+  if (!id || id.trim() === '') {
+    return 'Listing ID is required';
+  }
+  return null;
+}
+
+// returns a single property by its listing ID
+// if nothing matches, we send back a 404 so the client knows it genuinely doesn't exist
+router.get('/:id', async (req, res) => {
+  try {
+    console.log('HIT the /:id route, id:', req.params.id);
+    const { id } = req.params;
+
+    // make sure the id is actually there before wasting a database call
+    const idError = validateListingId(id);
+    if (idError) {
+      return res.status(400).json({ error: idError });
+    }
+
+    const [rows] = await db.query(
+      'SELECT * FROM rets_property WHERE L_ListingID = ?',
+      [id]
+    );
+
+    // nothing came back — tell the client the property doesn't exist
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Property not found' });
+    }
+
+    // rows[0] because we only want the single matching property, not an array
+    res.json(rows[0]);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Database error', message: error.message });
+  }
+});
+
 
 // export the router so index.js can mount it at /api/properties
 module.exports = router;
